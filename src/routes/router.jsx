@@ -8,6 +8,9 @@ import Register from "../pages/Auth/Register";
 import PrivateRoutes from "./PrivateRoutes";
 import Rider from "../pages/Rider";
 import SendPercel from "../pages/SendPercel";
+import DashboardLayout from "../layouts/DashboardLayout";
+import MyPercels from "../pages/Dashboard/MyPercels";
+import Payment from "../pages/Dashboard/Payment";
 
 const router = createBrowserRouter([
   {
@@ -54,6 +57,24 @@ const router = createBrowserRouter([
       {
         path: "register",
         Component: Register,
+      },
+    ],
+  },
+  {
+    path: "dashboard",
+    element: (
+      <PrivateRoutes>
+        <DashboardLayout></DashboardLayout>
+      </PrivateRoutes>
+    ),
+    children: [
+      {
+        path: "my-percels",
+        element: <MyPercels></MyPercels>,
+      },
+      {
+        path: "payment/:percelId",
+        element: <Payment></Payment>,
       },
     ],
   },

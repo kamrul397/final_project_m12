@@ -2,6 +2,8 @@ import React, { use } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useLoaderData } from "react-router";
 import Swal from "sweetalert2";
+import useAxiosSecure from "../hooks/useAxiosSecure";
+import useAuth from "../hooks/useAuth";
 
 const SendPercel = () => {
   const {
@@ -10,6 +12,9 @@ const SendPercel = () => {
     control,
     formState: { errors },
   } = useForm();
+  const { user } = useAuth();
+  console.log(user);
+  const axiosSecure = useAxiosSecure();
   const serviceCenters = useLoaderData();
   const regionsDuplicate = serviceCenters.map((center) => center.region);
   const regions = [...new Set(regionsDuplicate)];
@@ -60,6 +65,10 @@ const SendPercel = () => {
       denyButtonText: `Don't Agree`,
     }).then((result) => {
       if (result.isConfirmed) {
+        // save data to database
+        axiosSecure.post("/percels", { ...data, cost }).then((res) => {
+          console.log("after saving data:", res.data);
+        });
         Swal.fire(
           `Your parcel is sent to ${data.receiverName} in ${data.receiverRegion}!`,
           "",
@@ -132,6 +141,7 @@ const SendPercel = () => {
                 type="text"
                 className="input w-full"
                 placeholder="Sender Name"
+                defaultValue={user?.displayName}
                 {...register("senderName", { required: true })}
               />
               {/* sender email */}
@@ -140,6 +150,7 @@ const SendPercel = () => {
                 type="email"
                 className="input w-full"
                 placeholder="Sender Email"
+                defaultValue={user?.email}
                 {...register("senderEmail")}
               />
               {/* sender region */}
