@@ -4,12 +4,14 @@ import useAuth from "../../hooks/useAuth";
 import SocialLogin from "./SocialLogin";
 import axios from "axios";
 import { Link, useLocation, useNavigate } from "react-router";
+import useAxiosSecure from "../../hooks/useAxiosSecure";
 
 const Register = () => {
   const { registerUser, updateUserProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  console.log("location", location);
+
+  const axiosSecure = useAxiosSecure();
   const {
     register,
     handleSubmit,
@@ -31,6 +33,21 @@ const Register = () => {
             if (response.data.success) {
               const imgURL = response.data.data.display_url;
               console.log("Image URL:", imgURL);
+              // create user in database
+              const userData = {
+                name: data.name,
+                email: data.email,
+                photoURL: imgURL,
+              };
+              axiosSecure
+                .post("/users", userData)
+                .then((res) => {
+                  console.log("User created in database:", res.data);
+                })
+                .catch((error) => {
+                  console.error("Database User Creation Error:", error);
+                });
+
               // You can now use the imgURL as needed, e.g., update user profile
               const profile = {
                 displayName: data.name,

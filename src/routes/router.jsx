@@ -11,6 +11,10 @@ import SendPercel from "../pages/SendPercel";
 import DashboardLayout from "../layouts/DashboardLayout";
 import MyPercels from "../pages/Dashboard/MyPercels";
 import Payment from "../pages/Dashboard/Payment";
+import PaymentSuccess from "../pages/Dashboard/PaymentSuccess";
+import PaymentCancel from "../pages/Dashboard/PaymentCancel";
+import PaymentHistory from "../pages/Dashboard/PaymentHistory";
+import RidersApproval from "../pages/Dashboard/RidersApproval";
 
 const router = createBrowserRouter([
   {
@@ -37,6 +41,7 @@ const router = createBrowserRouter([
             <Rider></Rider>
           </PrivateRoutes>
         ),
+        loader: () => fetch("/ServiceCenter.json").then((res) => res.json()),
       },
       {
         path: "/coverage",
@@ -75,6 +80,22 @@ const router = createBrowserRouter([
       {
         path: "payment/:percelId",
         element: <Payment></Payment>,
+      },
+      {
+        path: "payment-success",
+        element: <PaymentSuccess></PaymentSuccess>,
+      },
+      {
+        path: "payment-cancelled",
+        element: <PaymentCancel></PaymentCancel>,
+      },
+      {
+        path: "payment-history",
+        element: <PaymentHistory></PaymentHistory>,
+      },
+      {
+        path: "approve-rider",
+        element: <RidersApproval></RidersApproval>,
       },
     ],
   },

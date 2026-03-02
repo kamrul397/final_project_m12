@@ -1,20 +1,39 @@
 import React from "react";
 import useAuth from "../../hooks/useAuth";
 import { useLocation, useNavigate } from "react-router";
+import useAxiosSecure from "../../hooks/useAxiosSecure";
 
 const SocialLogin = () => {
   const { signInWithGoogle } = useAuth();
   const location = useLocation();
+  const axiosSecure = useAxiosSecure();
 
   const navigate = useNavigate();
   const handleGoogleSignIn = () => {
     signInWithGoogle()
-      .then((result) => {
+      .then(async (result) => {
         const user = result.user;
-        console.log("Google Signed In User:", user);
-        // Redirect to the intended page after successful login
-        const from = location.state || "/";
-        navigate(from, { replace: true });
+
+        const userData = {
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+        };
+
+        try {
+          const res = await axiosSecure.post("/users", userData);
+
+          if (res.data.message === "User already exists") {
+            console.log("Existing user logged in");
+          } else {
+            console.log("New user created");
+          }
+
+          const from = location.state || "/";
+          navigate(from, { replace: true });
+        } catch (error) {
+          console.error("Database User Creation Error:", error);
+        }
       })
       .catch((error) => {
         console.error("Google Sign-In Error:", error);

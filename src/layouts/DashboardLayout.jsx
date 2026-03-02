@@ -1,5 +1,6 @@
 import React from "react";
 import { CiDeliveryTruck } from "react-icons/ci";
+import { FaMotorcycle } from "react-icons/fa";
 import { Link, NavLink, Outlet } from "react-router";
 
 const DashboardLayout = () => {
@@ -84,11 +85,16 @@ const DashboardLayout = () => {
 
             {/* List item */}
             <li>
-              <button
-                className="is-drawer-close:tooltip is-drawer-close:tooltip-right"
-                data-tip="Settings"
+              <NavLink
+                to="/dashboard/payment-history"
+                className={({ isActive }) =>
+                  `is-drawer-close:tooltip is-drawer-close:tooltip-right ${
+                    isActive ? "bg-base-300 font-semibold" : ""
+                  }`
+                }
+                data-tip="Payment History"
               >
-                {/* Settings icon */}
+                {/* History Icon */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -99,13 +105,28 @@ const DashboardLayout = () => {
                   stroke="currentColor"
                   className="my-1.5 inline-block size-4"
                 >
-                  <path d="M20 7h-9"></path>
-                  <path d="M14 17H5"></path>
-                  <circle cx="17" cy="17" r="3"></circle>
-                  <circle cx="7" cy="7" r="3"></circle>
+                  <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"></path>
                 </svg>
-                <span className="is-drawer-close:hidden">Settings</span>
-              </button>
+
+                <span className="is-drawer-close:hidden">Payment History</span>
+              </NavLink>
+            </li>
+            {/* Approve Rider*/}
+            <li>
+              <NavLink
+                to="/dashboard/approve-rider"
+                className={({ isActive }) =>
+                  `is-drawer-close:tooltip is-drawer-close:tooltip-right ${
+                    isActive ? "bg-base-300 font-semibold" : ""
+                  }`
+                }
+                data-tip="Approve Rider"
+              >
+                {/* History Icon */}
+                <FaMotorcycle className="my-1.5 inline-block size-4"></FaMotorcycle>
+
+                <span className="is-drawer-close:hidden">Approve Rider</span>
+              </NavLink>
             </li>
           </ul>
         </div>

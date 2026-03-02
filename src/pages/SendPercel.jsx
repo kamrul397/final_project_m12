@@ -1,4 +1,4 @@
-import React, { use } from "react";
+import React from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useLoaderData } from "react-router";
 import Swal from "sweetalert2";
@@ -12,10 +12,11 @@ const SendPercel = () => {
     control,
     formState: { errors },
   } = useForm();
+
   const { user } = useAuth();
-  console.log(user);
   const axiosSecure = useAxiosSecure();
   const serviceCenters = useLoaderData();
+
   const regionsDuplicate = serviceCenters.map((center) => center.region);
   const regions = [...new Set(regionsDuplicate)];
 
@@ -23,24 +24,29 @@ const SendPercel = () => {
     control,
     name: "senderRegion",
   });
+
   const receiverRegion = useWatch({
     control,
     name: "receiverRegion",
   });
 
   const districtByRegion = (region) => {
+    if (!region) return [];
     const filteredDistricts = serviceCenters.filter(
       (center) => center.region === region,
     );
     return filteredDistricts.map((center) => center.district);
   };
 
-  const handleSendPercel = (data) => {
-    const isSameDistrict = senderRegion === receiverRegion;
+  const handleSendPercel = async (data) => {
+    const isSameDistrict = data.senderRegion === data.receiverRegion;
+
     const isDocument = data.percelType === "document";
+
     const percelWeight = parseFloat(data.percelWeight) || 0;
 
     let cost = 0;
+
     if (isDocument) {
       cost = isSameDistrict ? 60 : 80;
     } else {
@@ -55,215 +61,209 @@ const SendPercel = () => {
         cost = minCharge + extraCharge;
       }
     }
-    console.log(data);
-    // console.log(cost);
+
     Swal.fire({
-      title: `Agree with our cost? ${cost} BDT`,
-      showDenyButton: true,
+      title: `Delivery cost is ${cost} BDT`,
+      text: "Do you want to proceed to payment?",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Yes! Agreed.",
-      denyButtonText: `Don't Agree`,
-    }).then((result) => {
+      confirmButtonText: "Yes, Pay Now",
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        // save data to database
-        axiosSecure.post("/percels", { ...data, cost }).then((res) => {
-          console.log("after saving data:", res.data);
-        });
-        Swal.fire(
-          `Your parcel is sent to ${data.receiverName} in ${data.receiverRegion}!`,
-          "",
-          "success",
-        );
-      } else if (result.isDenied) {
-        Swal.fire("Parcel is not sent!", "", "info");
+        try {
+          // 1️⃣ Save parcel first
+          const parcelData = {
+            ...data,
+            cost,
+            paymentStatus: "unpaid",
+            createdAt: new Date(),
+          };
+
+          const saveRes = await axiosSecure.post("/percels", parcelData);
+
+          if (saveRes.data.insertedId) {
+            const percelId = saveRes.data.insertedId;
+
+            // 2️⃣ Create Stripe session
+            const paymentRes = await axiosSecure.post("/payment", {
+              percelId,
+              percelName: data.percelName,
+              cost,
+            });
+
+            // 3️⃣ Redirect to Stripe
+            window.location.replace(paymentRes.data.url);
+          }
+        } catch (error) {
+          console.error(error);
+          Swal.fire("Error", "Something went wrong!", "error");
+        }
       }
     });
   };
+
   return (
     <div>
-      <div className="h2 text-5xl font-bold">Send a Percel</div>
+      <h2 className="text-5xl font-bold mb-6">Send a Percel</h2>
+
       <form
         onSubmit={handleSubmit(handleSendPercel)}
-        className="space-y-6 mt-6 p-3 text-black bg-base-200 rounded-box border border-base-300 w-full  mx-auto"
+        className="space-y-6 p-6 bg-base-200 rounded-box border"
       >
-        {/* percel type */}
+        {/* Parcel Type */}
         <div>
-          <label className="label mr-5">
+          <label className="mr-5">
             <input
               type="radio"
-              {...register("percelType", { required: true })}
               value="document"
-              className="radio"
+              {...register("percelType", {
+                required: true,
+              })}
               defaultChecked
             />
             Document
           </label>
-          <label className="label">
+
+          <label>
             <input
               type="radio"
-              {...register("percelType", { required: true })}
               value="non-document"
-              className="radio"
+              {...register("percelType", {
+                required: true,
+              })}
             />
             Non-Document
           </label>
         </div>
-        {/* percel info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          <fieldset className="fieldset">
-            <label className="label">Percel Name</label>
-            <input
-              type="text"
-              className="input w-full"
-              placeholder="Percel Name"
-              {...register("percelName", { required: true })}
-            />
-          </fieldset>
-          <fieldset className="fieldset">
-            <label className="label">Percel Weight (kg)</label>
-            <input
-              type="number"
-              className="input w-full"
-              placeholder="Percel Weight (kg)"
-              {...register("percelWeight", { required: true })}
-            />
-          </fieldset>
-        </div>
-        {/* two column */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {/* sender info */}
-          <div>
-            <h2 className="text-2xl font-semibold">Sender Information</h2>
-            <fieldset className="fieldset">
-              {/* sender name */}
-              <label className="label">Sender Name</label>
-              <input
-                type="text"
-                className="input w-full"
-                placeholder="Sender Name"
-                defaultValue={user?.displayName}
-                {...register("senderName", { required: true })}
-              />
-              {/* sender email */}
-              <label className="label mt-4">Sender Email</label>
-              <input
-                type="email"
-                className="input w-full"
-                placeholder="Sender Email"
-                defaultValue={user?.email}
-                {...register("senderEmail")}
-              />
-              {/* sender region */}
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Sender region</legend>
-                <select
-                  defaultValue="Pick a region"
-                  className="select w-full"
-                  {...register("senderRegion", { required: true })}
-                >
-                  <option disabled={true}>Pick a region</option>
-                  {regions.map((region, index) => (
-                    <option key={index} value={region}>
-                      {region}
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
-              {/* sender District */}
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Sender District</legend>
-                <select
-                  defaultValue="Pick a district"
-                  className="select w-full"
-                  {...register("senderDistrict", { required: true })}
-                >
-                  <option disabled={true}>Pick a district</option>
-                  {districtByRegion(senderRegion).map((district, index) => (
-                    <option key={index} value={district}>
-                      {district}
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
 
-              {/* sender phone Number */}
-              <label className="label mt-4">Sender Phone Number</label>
-              <input
-                type="number"
-                className="input w-full"
-                placeholder="Sender Phone Number"
-                {...register("senderPhoneNumber", { required: true })}
-              />
-            </fieldset>
-          </div>
-          {/* receiver info */}
-          <div>
-            <h2 className="text-2xl font-semibold">Receiver Information</h2>
-            <fieldset className="fieldset">
-              {/* receiver name */}
-              <label className="label">Receiver Name</label>
-              <input
-                type="text"
-                className="input w-full"
-                placeholder="Receiver Name"
-                {...register("receiverName", { required: true })}
-              />
-              {/* receiver email */}
-              <label className="label mt-4">Receiver Email</label>
-              <input
-                type="email"
-                className="input w-full"
-                placeholder="Receiver Email"
-                {...register("receiverEmail")}
-              />
-              {/* receiver region */}
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Receiver region</legend>
-                <select
-                  defaultValue="Pick a region"
-                  className="select w-full"
-                  {...register("receiverRegion", { required: true })}
-                >
-                  <option disabled={true}>Pick a region</option>
-                  {regions.map((region, index) => (
-                    <option key={index} value={region}>
-                      {region}
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
-              {/* receiver District */}
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Receiver District</legend>
-                <select
-                  defaultValue="Pick a district"
-                  className="select w-full"
-                  {...register("receiverDistrict", { required: true })}
-                >
-                  <option disabled={true}>Pick a district</option>
-                  {districtByRegion(receiverRegion).map((district, index) => (
-                    <option key={index} value={district}>
-                      {district}
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
-              {/* receiver phone Number */}
-              <label className="label mt-4">Receiver Phone Number</label>
-              <input
-                type="number"
-                className="input w-full"
-                placeholder="Receiver Phone Number"
-                {...register("receiverPhoneNumber", { required: true })}
-              />
-            </fieldset>
-          </div>
-        </div>
+        {/* Parcel Info */}
         <input
-          type="submit"
-          value="Send Percel"
-          className="btn btn-primary text-black"
+          type="text"
+          placeholder="Parcel Name"
+          className="input w-full"
+          {...register("percelName", {
+            required: true,
+          })}
         />
+
+        <input
+          type="number"
+          placeholder="Parcel Weight (kg)"
+          className="input w-full"
+          {...register("percelWeight", {
+            required: true,
+          })}
+        />
+
+        {/* Sender Info */}
+        <h3 className="text-2xl font-semibold">Sender Information</h3>
+
+        <input
+          type="text"
+          defaultValue={user?.displayName}
+          className="input w-full"
+          {...register("senderName", {
+            required: true,
+          })}
+        />
+
+        <input
+          type="email"
+          defaultValue={user?.email}
+          className="input w-full"
+          {...register("senderEmail")}
+        />
+
+        <select
+          className="select w-full"
+          {...register("senderRegion", {
+            required: true,
+          })}
+        >
+          <option value="">Pick Sender Region</option>
+          {regions.map((region, index) => (
+            <option key={index} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="select w-full"
+          {...register("senderDistrict", {
+            required: true,
+          })}
+        >
+          <option value="">Pick Sender District</option>
+          {districtByRegion(senderRegion).map((district, index) => (
+            <option key={index} value={district}>
+              {district}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="number"
+          placeholder="Sender Phone"
+          className="input w-full"
+          {...register("senderPhoneNumber", { required: true })}
+        />
+
+        {/* Receiver Info */}
+        <h3 className="text-2xl font-semibold">Receiver Information</h3>
+
+        <input
+          type="text"
+          placeholder="Receiver Name"
+          className="input w-full"
+          {...register("receiverName", {
+            required: true,
+          })}
+        />
+
+        <input
+          type="email"
+          placeholder="Receiver Email"
+          className="input w-full"
+          {...register("receiverEmail")}
+        />
+
+        <select
+          className="select w-full"
+          {...register("receiverRegion", {
+            required: true,
+          })}
+        >
+          <option value="">Pick Receiver Region</option>
+          {regions.map((region, index) => (
+            <option key={index} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="select w-full"
+          {...register("receiverDistrict", { required: true })}
+        >
+          <option value="">Pick Receiver District</option>
+          {districtByRegion(receiverRegion).map((district, index) => (
+            <option key={index} value={district}>
+              {district}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="number"
+          placeholder="Receiver Phone"
+          className="input w-full"
+          {...register("receiverPhoneNumber", { required: true })}
+        />
+
+        <button type="submit" className="btn btn-primary w-full">
+          Send Parcel
+        </button>
       </form>
     </div>
   );

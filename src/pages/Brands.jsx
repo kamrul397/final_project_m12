@@ -25,15 +25,20 @@ const Brands = () => {
     <>
       <Swiper
         slidesPerView={4}
-        centeredSlides={true}
         spaceBetween={30}
         loop={true}
+        speed={2000}
         autoplay={{
-          delay: 1500,
+          delay: 0,
           disableOnInteraction: false,
         }}
         modules={[Autoplay]}
         grabCursor={true}
+        breakpoints={{
+          320: { slidesPerView: 2 },
+          640: { slidesPerView: 3 },
+          1024: { slidesPerView: 4 },
+        }}
       >
         {brandLogos.map((logo, index) => (
           <SwiperSlide key={index}>
